@@ -73,8 +73,9 @@ unsigned int hash(char *str, int max)
  */
 HashTable *create_hash_table(int capacity)
 {
-  HashTable *ht;
-
+  HashTable *ht = malloc(sizeof(HashTable));
+  ht->capacity = capacity;
+  ht->storage = calloc(capacity, sizeof(LinkedPair *));
   return ht;
 }
 
@@ -89,7 +90,23 @@ HashTable *create_hash_table(int capacity)
  */
 void hash_table_insert(HashTable *ht, char *key, char *value)
 {
+  int index = hash(key, ht->capacity);
+	LinkedPair *pair = create_pair(key, value);
+	LinkedPair *stored_pair = ht->storage[index];
 
+  // if (index == ht->capacity){
+  //   ht = hash_table_resize(ht);
+  // }
+	if(stored_pair != NULL) {
+		if(strcmp(key, stored_pair->key) != 0) {
+			printf("WARNING: overwriting value %s:%s with %s:%s\n", stored_pair->key, stored_pair->value, pair->key, pair->value );
+		}
+		destroy_pair(stored_pair);
+	}
+
+	ht->storage[index] = pair;
+  printf("%s:%d\n", key,index);
+  // ht->storage[index-1]->next = ht->storage[index];
 }
 
 /*
@@ -102,7 +119,15 @@ void hash_table_insert(HashTable *ht, char *key, char *value)
  */
 void hash_table_remove(HashTable *ht, char *key)
 {
+  int index = hash(key, ht->capacity);
 
+	if(ht->storage[index] == NULL || strcmp(ht->storage[index]->key, key) != 0)  {
+		fprintf(stderr, "Unable to remove entry with key: %s", key);
+	} else {
+		destroy_pair(ht->storage[index]);
+		ht->storage[index] = NULL;
+    // ht->storage[index-1]->next = ht->storage[index+1];
+	}
 }
 
 /*
@@ -115,7 +140,14 @@ void hash_table_remove(HashTable *ht, char *key)
  */
 char *hash_table_retrieve(HashTable *ht, char *key)
 {
-  return NULL;
+  int index = hash(key, ht->capacity);
+
+	if(ht->storage[index] == NULL || strcmp(ht->storage[index]->key, key) != 0)  {
+		fprintf(stderr, "Unable to retrieve entry with key: %s\n", key);
+		return NULL;
+	}
+
+	return ht->storage[index]->value;
 }
 
 /*
@@ -125,7 +157,16 @@ char *hash_table_retrieve(HashTable *ht, char *key)
  */
 void destroy_hash_table(HashTable *ht)
 {
-
+  for(int i = 0; i < ht->capacity; i++){
+    for (int i = 0; i<ht->capacity; i++) {
+			if(ht->storage[i] != NULL) {
+				destroy_pair(ht->storage[i]);
+			}
+		}
+	  
+		free(ht->storage);
+		free(ht);
+  }
 }
 
 /*
@@ -138,7 +179,14 @@ void destroy_hash_table(HashTable *ht)
  */
 HashTable *hash_table_resize(HashTable *ht)
 {
-  HashTable *new_ht;
+  HashTable *new_ht = malloc(sizeof(HashTable));
+  new_ht->capacity = ht->capacity * 2;
+  new_ht->storage = calloc(new_ht->capacity, sizeof(LinkedPair *));
+  for(int i = 0; i < ht->capacity; i++){
+    new_ht->storage[i] = ht->storage[i];
+  }
+  free(ht->storage);
+  free(ht);
 
   return new_ht;
 }
