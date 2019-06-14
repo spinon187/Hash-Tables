@@ -94,19 +94,22 @@ void hash_table_insert(HashTable *ht, char *key, char *value)
 	LinkedPair *pair = create_pair(key, value);
 	LinkedPair *stored_pair = ht->storage[index];
 
-  // if (index == ht->capacity){
-  //   ht = hash_table_resize(ht);
-  // }
 	if(stored_pair != NULL) {
-		if(strcmp(key, stored_pair->key) != 0) {
+		if(strcmp(key, stored_pair->key) == 0) {
 			printf("WARNING: overwriting value %s:%s with %s:%s\n", stored_pair->key, stored_pair->value, pair->key, pair->value );
+      destroy_pair(stored_pair);
+      ht->storage[index] = pair;
 		}
-		destroy_pair(stored_pair);
+    else if(strcmp(key, stored_pair->key) != 0){
+      ht->storage[index] = pair;
+      ht->storage[index]->next = stored_pair;
+    }
 	}
+  else {
+    ht->storage[index] = pair;
+  }
+  
 
-	ht->storage[index] = pair;
-  printf("%s:%d\n", key,index);
-  // ht->storage[index-1]->next = ht->storage[index];
 }
 
 /*
@@ -120,14 +123,22 @@ void hash_table_insert(HashTable *ht, char *key, char *value)
 void hash_table_remove(HashTable *ht, char *key)
 {
   int index = hash(key, ht->capacity);
+  LinkedPair *place = ht->storage[index];
+  // LinkedPair *previous;
+  while (place){
+    if (strcmp(place->key, key) == 0){
+      // if(previous->key){
+      //   previous->next = place->next;
+      //   printf("Attached %s to %s\n", previous->key, previous->next->key);
+      // }
+      destroy_pair(place);
+    }
+    // previous = place;
+    place = place->next;
+  }
 
-	if(ht->storage[index] == NULL || strcmp(ht->storage[index]->key, key) != 0)  {
-		fprintf(stderr, "Unable to remove entry with key: %s", key);
-	} else {
-		destroy_pair(ht->storage[index]);
-		ht->storage[index] = NULL;
-    // ht->storage[index-1]->next = ht->storage[index+1];
-	}
+	fprintf(stderr, "Unable to retrieve entry with key: %s\n", key);
+	return NULL;
 }
 
 /*
@@ -141,13 +152,17 @@ void hash_table_remove(HashTable *ht, char *key)
 char *hash_table_retrieve(HashTable *ht, char *key)
 {
   int index = hash(key, ht->capacity);
+  LinkedPair *place = ht->storage[index];
+  while (place){
+    if (strcmp(place->key, key) == 0){
+      return place->value;
+    }
+    place = place->next;
+  }
 
-	if(ht->storage[index] == NULL || strcmp(ht->storage[index]->key, key) != 0)  {
-		fprintf(stderr, "Unable to retrieve entry with key: %s\n", key);
-		return NULL;
-	}
-
-	return ht->storage[index]->value;
+	fprintf(stderr, "Unable to retrieve entry with key: %s\n", key);
+	return NULL;
+  
 }
 
 /*
@@ -183,11 +198,14 @@ HashTable *hash_table_resize(HashTable *ht)
   new_ht->capacity = ht->capacity * 2;
   new_ht->storage = calloc(new_ht->capacity, sizeof(LinkedPair *));
   for(int i = 0; i < ht->capacity; i++){
-    new_ht->storage[i] = ht->storage[i];
+    LinkedPair *place2 = ht->storage[i];
+    while(place2){
+      hash_table_insert(new_ht, place2->key, place2->value);
+      place2 = place2->next;
+    }
   }
   free(ht->storage);
   free(ht);
-
   return new_ht;
 }
 
